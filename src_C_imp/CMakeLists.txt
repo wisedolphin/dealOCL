@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.1) # 3.1 << C_STANDARD 11
 
 project(HelloOpenCL LANGUAGES C)
 
-find_package(OpenCL CONFIG REQUIRED)
+find_package(OpenCL REQUIRED)
 
 add_executable(${PROJECT_NAME} main.c)
 

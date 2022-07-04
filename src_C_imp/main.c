@@ -11,6 +11,7 @@
  
 #define MAX_SOURCE_SIZE (0x100000)
 
+//gcc main.c -o vectorAddition -l OpenCL
  
  void error_proc(const char * msg, cl_int error_number)
 {
@@ -24,7 +25,7 @@ int main(void) {
 
     // Create the two input vectors
     int i;
-    const int LIST_SIZE = 50*1024*1024;
+    const int LIST_SIZE = 64*1024*1024;
     double*A = (double*)malloc(sizeof(double)*LIST_SIZE);
     double*B = (double*)malloc(sizeof(double)*LIST_SIZE);
     for(i = 0; i < LIST_SIZE; i++) {
@@ -49,7 +50,7 @@ int main(void) {
     //string with kernel source code
     #define STRINGIFY(...) #__VA_ARGS__
     const char* source_str = STRINGIFY(__kernel void vector_add_kernel(
-        __global int* A, __global int* B, __global int* C) {
+        __global double* A, __global double* B, __global double* C) {
         int i = get_global_id(0);
         C[i] = A[i] + B[i];
     });
@@ -64,12 +65,12 @@ int main(void) {
     cl_uint ret_num_platforms;
     // Geting number of platforms
     cl_int ret = clGetPlatformIDs(0, 0, &ret_num_platforms);
-	if (ret != CL_SUCCESS){error_proc("Getting number of platforms", ret);}
+    if (ret != CL_SUCCESS){error_proc("Getting number of platforms", ret);}
 	//mem allocation for platform list
     cl_platform_id *platformList = (cl_platform_id*)malloc(sizeof(cl_platform_id)*ret_num_platforms);
 	//getting list of platforms
     ret = clGetPlatformIDs(ret_num_platforms, platformList, 0);
-	if (ret != CL_SUCCESS){error_proc("Getting number of platforms", ret);}
+    if (ret != CL_SUCCESS){error_proc("Getting number of platforms", ret);}
     #define STR_SIZE 1024
     char nameBUF[STR_SIZE];
     //choosing platform with name platform_name
@@ -138,8 +139,11 @@ int main(void) {
 	if (ret != CL_SUCCESS){error_proc("clCreateKernel", ret); return(1);}
     // Set the arguments of the kernel
     ret = clSetKernelArg(kernel, 0, sizeof(cl_mem), (void *)&a_mem_obj);
+    if (ret != CL_SUCCESS){error_proc("clSetKernelArg", ret); return(1);}
     ret = clSetKernelArg(kernel, 1, sizeof(cl_mem), (void *)&b_mem_obj);
+    if (ret != CL_SUCCESS){error_proc("clSetKernelArg", ret); return(1);}
     ret = clSetKernelArg(kernel, 2, sizeof(cl_mem), (void *)&c_mem_obj);
+    if (ret != CL_SUCCESS){error_proc("clSetKernelArg", ret); return(1);}
     
     
     clock_t t;
@@ -149,8 +153,9 @@ int main(void) {
     size_t local_item_size = 64; // Divide work items into groups of 64
     ret = clEnqueueNDRangeKernel(command_queue, kernel, 1, NULL, 
             &global_item_size, &local_item_size, 0, NULL, NULL);
+    if (ret != CL_SUCCESS){error_proc("clEnqueueNDRangeKernel", ret); return(1);}
     t = clock() - t;
-    double time_taken = ((double)t) / CLOCKS_PER_SEC; // calculate the elapsed time
+    int time_taken = ((int)t) / CLOCKS_PER_SEC; // calculate the elapsed time
     printf("The kernel execution took %f seconds\n", time_taken);
 
 
@@ -158,10 +163,10 @@ int main(void) {
     double*C = (double*)malloc(sizeof(double)*LIST_SIZE);
     ret = clEnqueueReadBuffer(command_queue, c_mem_obj, CL_TRUE, 0, 
             LIST_SIZE * sizeof(double), C, 0, NULL, NULL);
-
+    if (ret != CL_SUCCESS){error_proc("clEnqueueReadBuffer", ret); return(1);}
     // Display the result to the screen
     //for(i = 0; i < LIST_SIZE; i++)
-        //printf("%lf + %lf = %lf\n", A[i], B[i], C[i]);
+        //printf("%lf + %lf = %lf \n", A[i], B[i], C[i]);
  
     // Clean up
     ret = clFlush(command_queue);
@@ -177,10 +182,10 @@ int main(void) {
     //Making the same calc on CPU
     t = clock();
     for (i = 0; i < LIST_SIZE; i++) {
-        C[i] = A[i] * B[i] + A[i];
+        C[i] = A[i] + B[i];
     }
     t = clock() - t;
-    time_taken = ((double)t) / CLOCKS_PER_SEC; // calculate the elapsed time
+    time_taken = ((int)t) / CLOCKS_PER_SEC; // calculate the elapsed time
     printf("The CPU execution took %f seconds\n", time_taken);
 
     free(A);

@@ -4,5 +4,5 @@ __kernel void vector_add_kernel(__global const double *A, __global const double 
     int i = get_global_id(0);
  
     // Do the operation
-    C[i] = A[i] * B[i] +  A[i];
+    C[i] = A[i] + B[i];
 }
