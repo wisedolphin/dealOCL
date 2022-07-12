@@ -1,0 +1,8 @@
+# depslib dependency file v1.0
+1657659942 source:/home/wisedolphin/GitProjects/dealOCL/src_Cpp_imp_with_classes/ocl_w_classes/main.cpp
+	<iostream>
+	<CL/opencl.hpp>
+	<string>
+	<numeric>
+	<chrono>
+
