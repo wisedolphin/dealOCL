@@ -14,14 +14,15 @@ He has a great cource on youtube https://youtu.be/Ccclo1GCX0A
 #include <string>
 #include <numeric>
 #include <chrono>
+#include <omp.h>
 
 constexpr size_t ARR_SIZE = 64*1024*1024;
 constexpr size_t LOCAL_SIZE = 64;
 
 std::string vecaddkernel{R"CLC(
-__kernel void vector_add(__global const int *A,
-                                __global const int *B,
-                                __global int *C)
+__kernel void vector_add(__global const double *A,
+                                __global const double *B,
+                                __global double *C)
 {
 // Get the index of the current element to be processed
 int i = get_global_id(0);
@@ -53,7 +54,7 @@ public:
         std::cout << "Selected: " << name << ": " << profile << std::endl;
     }
 
-    cl::Event vadd(cl_int const *A, cl_int const *B, cl_int *C, size_t Sz);
+    cl::Event vadd(cl_double const *A, cl_double const *B, cl_double *C, size_t Sz);
 };
 
 cl::Platform OclApp::select_platform()
@@ -82,10 +83,10 @@ cl::Context OclApp::get_context(cl_platform_id Pid)
     return cl::Context(CL_DEVICE_TYPE_GPU, properties);
 }
 
-cl::Event OclApp::vadd(cl_int const * Aptr, cl_int const *Bptr, cl_int *CPtr, size_t Sz)
+cl::Event OclApp::vadd(cl_double const * Aptr, cl_double const *Bptr, cl_double *CPtr, size_t Sz)
 {
     // buffer size
-    size_t BufSz = Sz * sizeof(cl_int);
+    size_t BufSz = Sz * sizeof(cl_double);
     // allocate buffer on divice
     cl::Buffer A(C_, CL_MEM_READ_ONLY, BufSz);
     cl::Buffer B(C_, CL_MEM_READ_ONLY, BufSz);
@@ -134,7 +135,7 @@ try
     cl_ulong GPUTstart, GPUTend;
 
     OclApp app;
-    cl::vector<cl_int> source1(ARR_SIZE), source2(ARR_SIZE), dst(ARR_SIZE);
+    cl::vector<cl_double> source1(ARR_SIZE), source2(ARR_SIZE), dst(ARR_SIZE);
     //fills vector from it_beg to it_end from 0 to size-1
     std::iota(source1.begin(), source1.end(), 0);
     //fills vector from it_end to it_beg from 0 to size-1
@@ -144,7 +145,7 @@ try
     cl::Event evt = app.vadd(source1.data(), source2.data(), dst.data(), dst.size());
     Tend = std::chrono::high_resolution_clock::now();
     long Duration = std::chrono::duration_cast<std::chrono::milliseconds>(Tend - Tstart).count();
-    std::cout << "GPU calc time with offload time: " << Duration << " ms\n";
+    std::cout << "\nGPU calc time with offload time: " << Duration << " ms\n";
 
     GPUTstart = evt.getProfilingInfo<CL_PROFILING_COMMAND_START>();
     GPUTend =   evt.getProfilingInfo<CL_PROFILING_COMMAND_END>();
@@ -162,20 +163,24 @@ try
             return -1;
         }
     }
-
+    std::cout << "All checks for GPU calc passed\n";
 
     //CPU execution
+    int thread_count = 16;
+    omp_set_num_threads(thread_count);
     Tstart = std::chrono::high_resolution_clock::now();
+    #pragma omp parallel for
     for(int i = 0; i!=ARR_SIZE; ++i)
     {
         dst[i] = source1[i] + source2[i];
     }
     Tend = std::chrono::high_resolution_clock::now();
     Duration = std::chrono::duration_cast<std::chrono::milliseconds>(Tend - Tstart).count();
-    std::cout << "CPU calc time: " << Duration << " ms\n";
+    std::cout << "\nCPU calc time: " << Duration << " ms\n";
+    std::cout << "OMP threads number " << thread_count << std::endl;
 
 
-    std::cout << "All jobs done!";
+    std::cout << "\nAll jobs done!";
 }
 catch (cl::Error &err)
 {

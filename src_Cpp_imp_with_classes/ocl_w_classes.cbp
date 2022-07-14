@@ -29,9 +29,14 @@
 		<Compiler>
 			<Add option="-Wall" />
 			<Add option="-fexceptions" />
+			<Add option="-fopenmp" />
 		</Compiler>
+		<ResourceCompiler>
+			<Add option="-fopenmp" />
+		</ResourceCompiler>
 		<Linker>
 			<Add library="OpenCL" />
+			<Add library="gomp" />
 		</Linker>
 		<Unit filename="main.cpp" />
 		<Extensions />
